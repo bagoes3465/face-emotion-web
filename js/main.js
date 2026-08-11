@@ -1,236 +1,261 @@
-﻿/* ============================================================
-   SENTIENT AI — interactions
-   ============================================================ */
-(function () {
-  "use strict";
+import { env, pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/+esm";
 
-  /* ---------- helpers ---------- */
-  var $ = function (sel, root) { return (root || document).querySelector(sel); };
-  var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
-  var clamp = function (v, min, max) { return Math.min(max, Math.max(min, v)); };
+const MODEL_ID = "cuplis123/facial_emotion_bgs";
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
-  /* ---------- toast ---------- */
-  var toastEl = $("#toast");
-  var toastTimer = null;
-  function toast(msg) {
-    if (!toastEl) return;
-    toastEl.textContent = msg;
-    toastEl.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2600);
-  }
+const toastEl = $("#toast");
+let toastTimer;
+function toast(message) {
+  if (!toastEl) return;
+  toastEl.textContent = message;
+  toastEl.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2800);
+}
 
-  /* ---------- mobile menu ---------- */
-  var navToggle = $(".nav-toggle");
-  var mobileMenu = $("#mobile-menu");
-  if (navToggle && mobileMenu) {
-    navToggle.addEventListener("click", function () {
-      var open = mobileMenu.classList.toggle("open");
-      navToggle.setAttribute("aria-expanded", open ? "true" : "false");
-    });
-    $$("a", mobileMenu).forEach(function (a) {
-      a.addEventListener("click", function () {
-        mobileMenu.classList.remove("open");
-        navToggle.setAttribute("aria-expanded", "false");
-      });
-    });
-  }
-
-  /* ---------- copy code ---------- */
-  var copyBtn = $("#copy-code");
-  var copyState = $("#copy-state");
-  var CODE_TEXT = [
-    "from transformers import pipeline",
-    "",
-    "# Initialize the emotion detection pipeline",
-    'classifier = pipeline("image-classification", model="cuplis123/facial_emotion_bgs")',
-    "",
-    "# Run inference on a frame",
-    'results = classifier("live_frame_01.jpg")',
-    "print(results)",
-    ""
-  ].join("\n");
-
-  function copyText(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-      return navigator.clipboard.writeText(text);
-    }
-    return new Promise(function (resolve, reject) {
-      var ta = document.createElement("textarea");
-      ta.value = text;
-      ta.setAttribute("readonly", "");
-      ta.style.position = "absolute";
-      ta.style.left = "-9999px";
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand("copy");
-        resolve();
-      } catch (e) {
-        reject(e);
-      } finally {
-        document.body.removeChild(ta);
-      }
-    });
-  }
-
-  if (copyBtn) {
-    copyBtn.addEventListener("click", function () {
-      copyText(CODE_TEXT).then(function () {
-        if (copyState) copyState.textContent = "Copied!";
-        copyBtn.classList.add("copied");
-        toast("Code copied to clipboard");
-        setTimeout(function () {
-          if (copyState) copyState.textContent = "Copy";
-          copyBtn.classList.remove("copied");
-        }, 1800);
-      }).catch(function () {
-        toast("Copy failed — select the code manually");
-      });
-    });
-  }
-
-  /* ---------- Get API Access ---------- */
-  var MODEL_ID = "cuplis123/facial_emotion_bgs";
-  $$('[data-action="api-access"]').forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      copyText(MODEL_ID).then(function () {
-        toast("Model ID copied: " + MODEL_ID);
-      }).catch(function () {
-        window.location.hash = "#how-it-works";
-        toast("API access: model ID " + MODEL_ID);
-      });
-    });
+const navToggle = $(".nav-toggle");
+const mobileMenu = $("#mobile-menu");
+if (navToggle && mobileMenu) {
+  navToggle.addEventListener("click", () => {
+    const open = mobileMenu.classList.toggle("open");
+    navToggle.setAttribute("aria-expanded", String(open));
   });
+  $$('a, button', mobileMenu).forEach((item) => item.addEventListener("click", () => {
+    mobileMenu.classList.remove("open");
+    navToggle.setAttribute("aria-expanded", "false");
+  }));
+}
 
-  /* ---------- Live demo simulation ---------- */
-  var EMOTIONS = [
-    { name: "NEUTRAL",   conf: 94.2, violet: 94.2, cyan: 82.1, happy: 12.5, sur: 4.1, ang: 1.2, dominant: "bar-violet" },
-    { name: "FOCUSED",   conf: 91.4, violet: 88.0, cyan: 91.4, happy: 7.2,  sur: 2.4, ang: 0.8, dominant: "bar-cyan" },
-    { name: "HAPPY",     conf: 87.6, violet: 80.3, cyan: 84.2, happy: 87.6, sur: 6.9, ang: 1.7, dominant: "bar-violet" },
-    { name: "SURPRISED", conf: 79.8, violet: 72.1, cyan: 76.4, happy: 15.3, sur: 79.8, ang: 2.2, dominant: "bar-violet" },
-    { name: "ANGRY",     conf: 83.5, violet: 70.8, cyan: 74.6, happy: 5.8,  sur: 3.1, ang: 83.5, dominant: "bar-cyan" }
-  ];
+const copyText = async (text) => {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+  if (!copied) throw new Error("Clipboard unavailable");
+};
 
-  var demoBtn = $("#initialize-demo");
-  var emotionValue = $("#emotion-value");
-  var emotionConf = $("#emotion-conf");
-  var emotionCard = $("#emotion-card");
-  var idStatus = $("#id-status");
-  var recDot = $("#rec-dot");
-  var scanner = $("#scanner-line");
-  var boundingBox = $("#bounding-box");
-  var sysStatus = $("#sys-status");
-  var latencyValue = $("#latency-value");
-  var exportBtn = $("#export-log");
-  var bars = $("#bars");
+const codeText = `from transformers import pipeline
 
-  var demoRunning = false;
-  var demoInterval = null;
-  var log = [];
+classifier = pipeline("image-classification", model="${MODEL_ID}")
+results = classifier("live_frame.jpg")
+print(results)`;
+const copyBtn = $("#copy-code");
+const copyState = $("#copy-state");
+copyBtn?.addEventListener("click", async () => {
+  try {
+    await copyText(codeText);
+    if (copyState) copyState.textContent = "Copied!";
+    copyBtn.classList.add("copied");
+    toast("Python example copied");
+    setTimeout(() => { if (copyState) copyState.textContent = "Copy"; copyBtn.classList.remove("copied"); }, 1800);
+  } catch {
+    toast("Copy failed — select the code manually");
+  }
+});
 
-  function setEmotion(e, logEntry) {
-    emotionValue.textContent = e.name;
-    emotionConf.textContent = "CONFIDENCE: " + e.conf.toFixed(1) + "%";
+$$('[data-action="api-access"]').forEach((button) => button.addEventListener("click", async () => {
+  try {
+    await copyText(MODEL_ID);
+    toast(`Model ID copied: ${MODEL_ID}`);
+  } catch {
+    window.location.hash = "#model-details";
+    toast(`Model ID: ${MODEL_ID}`);
+  }
+}));
+
+const demoBtn = $("#initialize-demo");
+const video = $("#camera-video");
+const placeholder = $(".camera-placeholder");
+const canvas = $("#analysis-canvas");
+const cameraMessage = $("#camera-message");
+const cameraLabel = $("#camera-label");
+const emotionValue = $("#emotion-value");
+const emotionConf = $("#emotion-conf");
+const emotionCard = $("#emotion-card");
+const idStatus = $("#id-status");
+const recDot = $("#rec-dot");
+const scanner = $("#scanner-line");
+const boundingBox = $("#bounding-box");
+const sysStatus = $("#sys-status");
+const latencyValue = $("#latency-value");
+const exportBtn = $("#export-log");
+const bars = $("#bars");
+
+let classifier;
+let stream;
+let running = false;
+let analyzing = false;
+let log = [];
+let loopTimer;
+
+function setStatus(system, face, message) {
+  if (sysStatus) sysStatus.textContent = system;
+  if (idStatus) idStatus.textContent = face;
+  if (cameraMessage) cameraMessage.textContent = message;
+}
+
+function updateTelemetry(results, latency) {
+  const normalized = results.map((item) => ({
+    label: String(item.label || "unknown").replace(/[_-]+/g, " ").toUpperCase(),
+    score: Number(item.score || 0) * 100
+  }));
+  const top = normalized[0];
+  if (!top) return;
+  if (emotionValue) emotionValue.textContent = top.label;
+  if (emotionConf) emotionConf.textContent = `CONFIDENCE: ${top.score.toFixed(1)}%`;
+  if (emotionCard) {
     emotionCard.style.opacity = "0.55";
-    setTimeout(function () { emotionCard.style.opacity = "1"; }, 120);
-
-    if (bars) {
-      var fills = $$(".bar-fill", bars);
-      var rowMeta = $$(".bar-meta .bar-pct", bars);
-      var values = [e.violet, e.cyan, e.happy, e.sur, e.ang];
-      fills.forEach(function (f, i) { f.style.setProperty("--w", values[i] + "%"); });
-      rowMeta.forEach(function (r, i) { r.textContent = values[i].toFixed(1) + "%"; });
-    }
-    if (logEntry) {
-      log.push({ ts: new Date().toISOString(), emotion: e.name, confidence: e.conf.toFixed(1) + "%", latencyMs: logEntry.latency });
-    }
+    setTimeout(() => { emotionCard.style.opacity = "1"; }, 120);
   }
+  if (latencyValue) latencyValue.textContent = `${latency}ms`;
+  const rows = bars ? $$(".bar-row", bars) : [];
+  rows.forEach((row, index) => {
+    const label = $(".bar-meta span:first-child", row);
+    const value = $(".bar-pct", row);
+    const fill = $(".bar-fill", row);
+    const result = normalized[index];
+    const score = result ? result.score : 0;
+    if (label) label.textContent = result ? result.label : "—";
+    if (value) value.textContent = `${score.toFixed(1)}%`;
+    if (fill) fill.style.setProperty("--w", `${score}%`);
+  });
+  log.push({ timestamp: new Date().toISOString(), emotion: top.label, confidence: top.score.toFixed(1), latencyMs: latency });
+}
 
-  function startDemo() {
-    if (demoRunning) return;
-    demoRunning = true;
-    if (demoBtn) {
-      demoBtn.textContent = "Terminate Demo";
-      demoBtn.classList.add("is-live");
-    }
-    if (recDot) recDot.classList.add("live");
-    if (scanner) scanner.classList.add("scanning");
-    if (boundingBox) boundingBox.classList.add("tracking");
-    if (idStatus) idStatus.textContent = "TRACKING";
-    if (sysStatus) sysStatus.textContent = "SYS.ACTIVE";
+async function loadClassifier() {
+  if (classifier) return classifier;
+  setStatus("MODEL.LOADING", "WAITING", "Downloading model from Hugging Face…");
+  env.allowRemoteModels = true;
+  env.useBrowserCache = true;
+  classifier = await pipeline("image-classification", MODEL_ID, { quantized: true });
+  return classifier;
+}
+
+async function analyzeFrame() {
+  if (!running || analyzing || !classifier || !video.videoWidth) return;
+  analyzing = true;
+  const started = performance.now();
+  try {
+    canvas.width = 224;
+    canvas.height = 224;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const results = await classifier(canvas, { topk: 5 });
+    updateTelemetry(results, Math.max(1, Math.round(performance.now() - started)));
+    setStatus("SYS.ACTIVE", "TRACKING", "Face emotion analysis is running");
+  } catch (error) {
+    console.error(error);
+    setStatus("MODEL.ERROR", "ERROR", "Model could not analyze this frame");
+    toast(error.message || "Inference failed");
+  } finally {
+    analyzing = false;
+  }
+}
+
+function scheduleAnalysis() {
+  clearTimeout(loopTimer);
+  if (!running) return;
+  analyzeFrame();
+  loopTimer = setTimeout(scheduleAnalysis, 650);
+}
+
+async function stopDemo(showToast = true) {
+  running = false;
+  clearTimeout(loopTimer);
+  if (stream) stream.getTracks().forEach((track) => track.stop());
+  stream = null;
+  if (video) { video.pause(); video.srcObject = null; }
+  placeholder?.classList.remove("is-hidden");
+  video?.classList.remove("is-visible");
+  demoBtn?.classList.remove("is-live");
+  if (demoBtn) demoBtn.textContent = "Start Camera Demo";
+  recDot?.classList.remove("live");
+  scanner?.classList.remove("scanning");
+  boundingBox?.classList.remove("tracking");
+  if (exportBtn) exportBtn.disabled = log.length === 0;
+  if (cameraLabel) cameraLabel.textContent = "CAMERA / READY";
+  if (latencyValue) latencyValue.textContent = "--";
+  setStatus("MODEL.IDLE", "WAITING", "Press Start Camera Demo to begin");
+  if (showToast) toast("Camera stopped");
+}
+
+async function startDemo() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setStatus("CAMERA.ERROR", "ERROR", "This browser does not support camera access");
+    toast("Camera access is unavailable in this browser");
+    return;
+  }
+  try {
+    demoBtn && (demoBtn.disabled = true);
+    setStatus("MODEL.LOADING", "WAITING", "Loading model and requesting camera access…");
+    const [loadedClassifier, cameraStream] = await Promise.all([
+      loadClassifier(),
+      navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 720 }, height: { ideal: 720 }, facingMode: "user" }, audio: false })
+    ]);
+    classifier = loadedClassifier;
+    stream = cameraStream;
+    video.srcObject = stream;
+    await video.play();
+    running = true;
+    placeholder?.classList.add("is-hidden");
+    video?.classList.add("is-visible");
+    demoBtn?.classList.add("is-live");
+    if (demoBtn) demoBtn.textContent = "Stop Camera Demo";
+    recDot?.classList.add("live");
+    scanner?.classList.add("scanning");
+    boundingBox?.classList.add("tracking");
+    if (cameraLabel) cameraLabel.textContent = "CAMERA / LIVE";
     if (exportBtn) exportBtn.disabled = false;
-
-    var step = 0;
-    setEmotion(EMOTIONS[0], { latency: 12 });
-
-    demoInterval = setInterval(function () {
-      step += 1;
-      var e = EMOTIONS[step % EMOTIONS.length];
-      var latency = Math.round(clamp(9 + Math.random() * 9, 8, 18));
-      if (latencyValue) latencyValue.textContent = latency;
-      setEmotion(e, { latency: latency });
-    }, 2600);
+    setStatus("SYS.ACTIVE", "TRACKING", "Face emotion analysis is starting…");
+    scheduleAnalysis();
+    toast("Live camera demo started");
+  } catch (error) {
+    console.error(error);
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    stream = null;
+    setStatus("SYSTEM.ERROR", "ERROR", error.name === "NotAllowedError" ? "Allow camera access and try again" : "Could not start the camera");
+    toast(error.message || "Could not start camera demo");
+  } finally {
+    if (demoBtn) demoBtn.disabled = false;
   }
+}
 
-  function stopDemo() {
-    if (!demoRunning) return;
-    demoRunning = false;
-    clearInterval(demoInterval);
-    demoInterval = null;
-    if (demoBtn) { demoBtn.textContent = "Initialize Demo"; demoBtn.classList.remove("is-live"); }
-    if (recDot) recDot.classList.remove("live");
-    if (scanner) scanner.classList.remove("scanning");
-    if (boundingBox) boundingBox.classList.remove("tracking");
-    if (idStatus) idStatus.textContent = "ANALYZING";
-    if (sysStatus) sysStatus.textContent = "SYS.READY";
-    if (latencyValue) latencyValue.textContent = "12";
-  }
+demoBtn?.addEventListener("click", () => {
+  if (running) stopDemo();
+  else startDemo();
+});
 
-  if (demoBtn) {
-    demoBtn.addEventListener("click", function () {
-      if (demoRunning) {
-        stopDemo();
-        toast("Demo terminated");
-      } else {
-        startDemo();
-        toast("Live demo initialized");
-      }
-    });
-  }
+function download(name, content, type = "text/plain") {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = name;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
-  /* ---------- Export log ---------- */
-  function download(name, content, type) {
-    var blob = new Blob([content], { type: type || "text/plain" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function () {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 120);
-  }
+exportBtn?.addEventListener("click", () => {
+  const lines = ["timestamp,emotion,confidence,latencyMs", ...log.map((row) => [row.timestamp, row.emotion, row.confidence, row.latencyMs].join(","))];
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  download(`cuplis-ai-emotion-log-${stamp}.csv`, lines.join("\n"), "text/csv");
+  toast(`Emotion log exported (${log.length} samples)`);
+});
 
-  if (exportBtn) {
-    exportBtn.disabled = true;
-    exportBtn.addEventListener("click", function () {
-      var lines = ["timestamp,emotion,confidence,latencyMs"];
-      log.forEach(function (row) {
-        lines.push([row.ts, row.emotion, row.confidence, row.latencyMs].join(","));
-      });
-      var stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-      download("sentient-telemetry-" + stamp + ".csv", lines.join("\n"), "text/csv");
-      toast("Telemetry log exported (" + log.length + " samples)");
-    });
-  }
+window.addEventListener("beforeunload", () => { if (stream) stream.getTracks().forEach((track) => track.stop()); });
 
-  /* ---------- Toggle CTA label while live ---------- */
-  var btnStyle = document.createElement("style");
-  btnStyle.textContent = ".btn-primary.is-live{background:var(--secondary-container);color:var(--on-secondary-container);box-shadow:0 0 15px rgba(220,184,255,0.35);}";
-  document.head.appendChild(btnStyle);
-
-  /* ---------- year normalization (kept from spec: 2024) ---------- */
-})();
+const buttonStyle = document.createElement("style");
+buttonStyle.textContent = ".btn-primary.is-live{background:var(--secondary-container);color:var(--on-secondary-container);box-shadow:0 0 15px rgba(220,184,255,0.35)}";
+document.head.appendChild(buttonStyle);
