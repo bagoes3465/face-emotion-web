@@ -502,3 +502,27 @@ code { font-family: var(--font-data); }
 .camera-video.is-visible + #analysis-canvas + .camera-message { display: none; }
 .btn:disabled { cursor: wait; opacity: .65; }
 .video-img.camera-video { width: 100%; height: 100%; opacity: 1; }
+
+.camera-placeholder {
+  position: absolute; inset: 0; z-index: 1; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 32%, rgba(0, 240, 255, 0.18), transparent 34%), radial-gradient(circle at 50% 72%, rgba(119, 1, 208, 0.14), transparent 42%), linear-gradient(160deg, rgba(7, 14, 26, 0.98), rgba(13, 19, 32, 0.96) 52%, rgba(25, 32, 44, 0.9));
+  border: 1px solid rgba(0, 240, 255, 0.08);
+}
+.camera-placeholder::before,
+.camera-placeholder::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+.camera-placeholder::before { background: linear-gradient(to right, transparent 0 49.4%, rgba(0,240,255,0.18) 49.4% 50.6%, transparent 50.6% 100%), linear-gradient(to bottom, transparent 0 49.4%, rgba(220,184,255,0.12) 49.4% 50.6%, transparent 50.6% 100%); opacity: 0.24; mix-blend-mode: screen; }
+.camera-placeholder::after { background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 20%, transparent 80%, rgba(0,0,0,0.22)); }
+.camera-placeholder-glow { position: absolute; inset: 0; background: radial-gradient(circle at 50% 48%, rgba(0, 240, 255, 0.24), transparent 18%), radial-gradient(circle at 50% 48%, rgba(220, 184, 255, 0.18), transparent 28%); filter: blur(8px); opacity: 0.9; }
+.camera-placeholder-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px); background-size: 24px 24px; mask-image: radial-gradient(circle at center, black 10%, transparent 78%); opacity: 0.45; }
+.camera-placeholder-core { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 20px; text-align: center; }
+.camera-placeholder-ring { width: 162px; height: 162px; border-radius: 50%; border: 1px solid rgba(0,240,255,0.42); box-shadow: 0 0 0 10px rgba(0,240,255,0.04), 0 0 40px rgba(0,240,255,0.16), inset 0 0 28px rgba(220,184,255,0.12); background: radial-gradient(circle, rgba(0,240,255,0.08) 0 34%, transparent 35% 100%); position: relative; }
+.camera-placeholder-ring::before, .camera-placeholder-ring::after { content: ""; position: absolute; inset: 50%; transform: translate(-50%, -50%); border-radius: 50%; }
+.camera-placeholder-ring::before { width: 96px; height: 96px; border: 1px dashed rgba(220,184,255,0.38); box-shadow: 0 0 18px rgba(220,184,255,0.2); }
+.camera-placeholder-ring::after { width: 40px; height: 40px; background: rgba(0,240,255,0.16); border: 1px solid rgba(0,240,255,0.5); box-shadow: 0 0 20px rgba(0,240,255,0.35); }
+.camera-placeholder-icon { position: absolute; inset: 0; display: grid; place-items: center; color: var(--primary-container); }
+.camera-placeholder-icon svg { width: 62px; height: 62px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 10px rgba(0,240,255,0.45)); }
+.camera-placeholder-copy { display: flex; flex-direction: column; gap: 4px; }
+.camera-placeholder-title { font-family: var(--font-data); font-size: 12px; line-height: 16px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--primary); }
+.camera-placeholder-subtitle { max-width: 240px; font-family: var(--font-ui); font-size: 13px; line-height: 20px; color: var(--on-surface-variant); }
+.video-img.camera-video { width: 100%; height: 100%; opacity: 1; }

@@ -71,7 +71,20 @@
       <!-- Video Canvas -->
       <div class="video-pane" id="video-pane">
         <div class="video-frame" id="video-frame">
-          <img class="video-img camera-placeholder" src="assets/feed.jpg" alt="Camera preview placeholder" width="560" height="528" fetchpriority="high"/>
+          <div class="camera-placeholder" aria-hidden="true">
+            <div class="camera-placeholder-glow"></div>
+            <div class="camera-placeholder-grid"></div>
+            <div class="camera-placeholder-core">
+              <div class="camera-placeholder-ring"></div>
+              <div class="camera-placeholder-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H9l1.5-2h3L15 5h2.5A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z"/><circle cx="12" cy="12" r="3.5"/></svg>
+              </div>
+              <div class="camera-placeholder-copy">
+                <span class="camera-placeholder-title">Camera Standby</span>
+                <span class="camera-placeholder-subtitle">Theme matched to cuplis ai neural interface</span>
+              </div>
+            </div>
+          </div>
           <video class="video-img camera-video" id="camera-video" autoplay muted playsinline aria-label="Live camera preview"></video>
           <canvas id="analysis-canvas" hidden></canvas>
           <div class="camera-message" id="camera-message">Press Start Camera Demo to begin</div>
