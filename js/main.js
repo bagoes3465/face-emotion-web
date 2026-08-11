@@ -1,4 +1,5 @@
 const MODEL_ID = "cuplis123/facial_emotion_bgs";
+const INFERENCE_ENDPOINT = "/api/emotion";
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
@@ -9,7 +10,7 @@ function toast(message) {
   toastEl.textContent = message;
   toastEl.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2800);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 3000);
 }
 
 const navToggle = $(".nav-toggle");
@@ -25,7 +26,7 @@ if (navToggle && mobileMenu) {
   }));
 }
 
-const copyText = async (text) => {
+async function copyText(text) {
   if (navigator.clipboard && window.isSecureContext) {
     await navigator.clipboard.writeText(text);
     return;
@@ -40,7 +41,7 @@ const copyText = async (text) => {
   const copied = document.execCommand("copy");
   textarea.remove();
   if (!copied) throw new Error("Clipboard unavailable");
-};
+}
 
 const codeText = `from transformers import pipeline
 
@@ -55,9 +56,12 @@ copyBtn?.addEventListener("click", async () => {
     if (copyState) copyState.textContent = "Copied!";
     copyBtn.classList.add("copied");
     toast("Python example copied");
-    setTimeout(() => { if (copyState) copyState.textContent = "Copy"; copyBtn.classList.remove("copied"); }, 1800);
+    setTimeout(() => {
+      if (copyState) copyState.textContent = "Copy";
+      copyBtn.classList.remove("copied");
+    }, 1800);
   } catch {
-    toast("Copy failed — select the code manually");
+    toast("Copy failed - select the code manually");
   }
 });
 
@@ -89,11 +93,10 @@ const latencyValue = $("#latency-value");
 const exportBtn = $("#export-log");
 const bars = $("#bars");
 
-let classifier;
-let transformersModule;
 let stream;
 let running = false;
 let analyzing = false;
+let inferenceBlocked = false;
 let log = [];
 let loopTimer;
 
@@ -124,26 +127,15 @@ function updateTelemetry(results, latency) {
     const fill = $(".bar-fill", row);
     const result = normalized[index];
     const score = result ? result.score : 0;
-    if (label) label.textContent = result ? result.label : "—";
+    if (label) label.textContent = result ? result.label : "-";
     if (value) value.textContent = `${score.toFixed(1)}%`;
     if (fill) fill.style.setProperty("--w", `${score}%`);
   });
   log.push({ timestamp: new Date().toISOString(), emotion: top.label, confidence: top.score.toFixed(1), latencyMs: latency });
 }
 
-async function loadClassifier() {
-  if (classifier) return classifier;
-  setStatus("MODEL.LOADING", "TRACKING", "Downloading model from Hugging Face…");
-  transformersModule = transformersModule || await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/+esm");
-  const { env, pipeline } = transformersModule;
-  env.allowRemoteModels = true;
-  env.useBrowserCache = true;
-  classifier = await pipeline("image-classification", MODEL_ID, { quantized: true });
-  return classifier;
-}
-
 async function analyzeFrame() {
-  if (!running || analyzing || !classifier || !video.videoWidth) return;
+  if (!running || analyzing || inferenceBlocked || !video.videoWidth) return;
   analyzing = true;
   const started = performance.now();
   try {
@@ -151,27 +143,37 @@ async function analyzeFrame() {
     canvas.height = 224;
     const context = canvas.getContext("2d", { willReadFrequently: true });
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const results = await classifier(canvas, { topk: 5 });
+    const response = await fetch(INFERENCE_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: canvas.toDataURL("image/jpeg", 0.82) })
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Inference endpoint failed");
+    const results = Array.isArray(payload) ? payload : payload.results;
+    if (!Array.isArray(results)) throw new Error("Model returned an invalid response");
     updateTelemetry(results, Math.max(1, Math.round(performance.now() - started)));
     setStatus("SYS.ACTIVE", "TRACKING", "Face emotion analysis is running");
   } catch (error) {
     console.error(error);
-    setStatus("MODEL.ERROR", "ERROR", "Model could not analyze this frame");
+    inferenceBlocked = true;
+    setStatus("MODEL.ERROR", "ERROR", error.message || "Model could not analyze this frame");
     toast(error.message || "Inference failed");
   } finally {
     analyzing = false;
   }
 }
 
-function scheduleAnalysis() {
+async function scheduleAnalysis() {
   clearTimeout(loopTimer);
-  if (!running) return;
-  analyzeFrame();
-  loopTimer = setTimeout(scheduleAnalysis, 650);
+  if (!running || inferenceBlocked) return;
+  await analyzeFrame();
+  if (running && !inferenceBlocked) loopTimer = setTimeout(scheduleAnalysis, 850);
 }
 
 async function stopDemo(showToast = true) {
   running = false;
+  inferenceBlocked = false;
   clearTimeout(loopTimer);
   if (stream) stream.getTracks().forEach((track) => track.stop());
   stream = null;
@@ -203,7 +205,8 @@ async function startDemo() {
   }
   try {
     demoBtn && (demoBtn.disabled = true);
-    setStatus("CAMERA.REQUEST", "WAITING", "Requesting camera access…");
+    inferenceBlocked = false;
+    setStatus("CAMERA.REQUEST", "WAITING", "Requesting camera access...");
     stream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 720 }, height: { ideal: 720 }, facingMode: "user" },
       audio: false
@@ -220,20 +223,9 @@ async function startDemo() {
     boundingBox?.classList.add("tracking");
     if (cameraLabel) cameraLabel.textContent = "CAMERA / LIVE";
     if (exportBtn) exportBtn.disabled = false;
-    setStatus("MODEL.LOADING", "TRACKING", "Camera is live; loading emotion model…");
+    setStatus("SERVER.READY", "TRACKING", "Camera is live; starting model inference...");
     toast("Camera preview started");
-
-    try {
-      await loadClassifier();
-      if (running) {
-        setStatus("SYS.ACTIVE", "TRACKING", "Face emotion analysis is running");
-        scheduleAnalysis();
-      }
-    } catch (modelError) {
-      console.error(modelError);
-      setStatus("MODEL.ERROR", "TRACKING", "Camera is live, but model loading failed");
-      toast(modelError.message || "Could not load the Hugging Face model");
-    }
+    scheduleAnalysis();
   } catch (error) {
     console.error(error);
     if (stream) stream.getTracks().forEach((track) => track.stop());
@@ -244,6 +236,7 @@ async function startDemo() {
     if (demoBtn) demoBtn.disabled = false;
   }
 }
+
 demoBtn?.addEventListener("click", () => {
   if (running) stopDemo();
   else startDemo();
