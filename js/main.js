@@ -168,7 +168,7 @@ async function scheduleAnalysis() {
   clearTimeout(loopTimer);
   if (!running || inferenceBlocked) return;
   await analyzeFrame();
-  if (running && !inferenceBlocked) loopTimer = setTimeout(scheduleAnalysis, 850);
+  if (running && !inferenceBlocked) loopTimer = setTimeout(scheduleAnalysis, 1500);
 }
 
 async function stopDemo(showToast = true) {
