@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    SENTIENT AI — Neural Dark design system
    Tokens derived from DESIGN.md (Material 3 "Neural Dark")
    ============================================================ */
@@ -495,9 +495,10 @@ code { font-family: var(--font-data); }
   *, *::before, *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; transition-duration: 0.001s !important; }
 }
 
-.camera-video { display: none; transform: scaleX(-1); object-fit: cover; }
+.camera-video { display: none; transform: scaleX(-1); object-fit: cover; background: #000; }
 .camera-video.is-visible { display: block; }
 .camera-placeholder.is-hidden { display: none; }
 .camera-message { position: absolute; left: 50%; top: 50%; z-index: 25; transform: translate(-50%, -50%); width: min(90%, 360px); padding: 12px 16px; text-align: center; color: var(--on-surface); background: color-mix(in srgb, var(--surface) 82%, transparent); border: 1px solid var(--outline-variant); border-radius: var(--r-md); font-family: var(--font-data); font-size: 11px; line-height: 16px; letter-spacing: .05em; pointer-events: none; }
 .camera-video.is-visible + #analysis-canvas + .camera-message { display: none; }
 .btn:disabled { cursor: wait; opacity: .65; }
+.video-img.camera-video { width: 100%; height: 100%; opacity: 1; }

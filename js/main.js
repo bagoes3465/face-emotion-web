@@ -1,5 +1,3 @@
-import { env, pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/+esm";
-
 const MODEL_ID = "cuplis123/facial_emotion_bgs";
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -92,6 +90,7 @@ const exportBtn = $("#export-log");
 const bars = $("#bars");
 
 let classifier;
+let transformersModule;
 let stream;
 let running = false;
 let analyzing = false;
@@ -134,7 +133,9 @@ function updateTelemetry(results, latency) {
 
 async function loadClassifier() {
   if (classifier) return classifier;
-  setStatus("MODEL.LOADING", "WAITING", "Downloading model from Hugging Face…");
+  setStatus("MODEL.LOADING", "TRACKING", "Downloading model from Hugging Face…");
+  transformersModule = transformersModule || await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/+esm");
+  const { env, pipeline } = transformersModule;
   env.allowRemoteModels = true;
   env.useBrowserCache = true;
   classifier = await pipeline("image-classification", MODEL_ID, { quantized: true });
@@ -190,6 +191,11 @@ async function stopDemo(showToast = true) {
 }
 
 async function startDemo() {
+  if (!window.isSecureContext && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+    setStatus("CAMERA.ERROR", "ERROR", "Camera needs HTTPS or localhost");
+    toast("Open this site through HTTPS or localhost");
+    return;
+  }
   if (!navigator.mediaDevices?.getUserMedia) {
     setStatus("CAMERA.ERROR", "ERROR", "This browser does not support camera access");
     toast("Camera access is unavailable in this browser");
@@ -197,13 +203,11 @@ async function startDemo() {
   }
   try {
     demoBtn && (demoBtn.disabled = true);
-    setStatus("MODEL.LOADING", "WAITING", "Loading model and requesting camera access…");
-    const [loadedClassifier, cameraStream] = await Promise.all([
-      loadClassifier(),
-      navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 720 }, height: { ideal: 720 }, facingMode: "user" }, audio: false })
-    ]);
-    classifier = loadedClassifier;
-    stream = cameraStream;
+    setStatus("CAMERA.REQUEST", "WAITING", "Requesting camera access…");
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 720 }, height: { ideal: 720 }, facingMode: "user" },
+      audio: false
+    });
     video.srcObject = stream;
     await video.play();
     running = true;
@@ -216,9 +220,20 @@ async function startDemo() {
     boundingBox?.classList.add("tracking");
     if (cameraLabel) cameraLabel.textContent = "CAMERA / LIVE";
     if (exportBtn) exportBtn.disabled = false;
-    setStatus("SYS.ACTIVE", "TRACKING", "Face emotion analysis is starting…");
-    scheduleAnalysis();
-    toast("Live camera demo started");
+    setStatus("MODEL.LOADING", "TRACKING", "Camera is live; loading emotion model…");
+    toast("Camera preview started");
+
+    try {
+      await loadClassifier();
+      if (running) {
+        setStatus("SYS.ACTIVE", "TRACKING", "Face emotion analysis is running");
+        scheduleAnalysis();
+      }
+    } catch (modelError) {
+      console.error(modelError);
+      setStatus("MODEL.ERROR", "TRACKING", "Camera is live, but model loading failed");
+      toast(modelError.message || "Could not load the Hugging Face model");
+    }
   } catch (error) {
     console.error(error);
     if (stream) stream.getTracks().forEach((track) => track.stop());
@@ -229,7 +244,6 @@ async function startDemo() {
     if (demoBtn) demoBtn.disabled = false;
   }
 }
-
 demoBtn?.addEventListener("click", () => {
   if (running) stopDemo();
   else startDemo();
