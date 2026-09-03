@@ -200,9 +200,10 @@ code { font-family: var(--font-mono); }
 /* ============ Hero ============ */
 .hero {
   position: relative; overflow: hidden;
-  padding: 100px var(--margin-mobile) 80px;
+  padding: 60px var(--margin-mobile) 40px;
   text-align: center;
 }
+@media (min-width: 600px) { .hero { padding: 80px var(--margin-mobile) 60px; } }
 @media (min-width: 900px) { .hero { padding: 120px var(--margin-desktop) 100px; } }
 
 .hero-bg-grid {
@@ -237,15 +238,15 @@ code { font-family: var(--font-mono); }
 }
 
 .hero-title {
-  font-family: var(--font-ui); font-size: clamp(32px,6vw,56px);
+  font-family: var(--font-ui); font-size: clamp(26px,6vw,56px);
   font-weight: 700; line-height: 1.12; letter-spacing: -0.03em;
-  color: #fff; margin-bottom: 20px;
+  color: #fff; margin-bottom: 16px;
 }
 .accent { color: var(--cyan); }
 
 .hero-sub {
-  font-size: 16px; line-height: 26px; color: var(--text-muted);
-  max-width: 600px; margin-inline: auto; margin-bottom: 36px;
+  font-size: 15px; line-height: 24px; color: var(--text-muted);
+  max-width: 600px; margin-inline: auto; margin-bottom: 24px;
 }
 
 .code-chip {
@@ -257,37 +258,84 @@ code { font-family: var(--font-mono); }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
 
 /* ============ Dashboard Section ============ */
-.dashboard-section { padding: 0 var(--margin-mobile) 80px; }
+.dashboard-section { padding: 0 0 60px; }
+
+/* Wrapper agar video full-bleed di mobile */
+.dashboard-outer {
+  /* Di mobile, override container padding sehingga card menyentuh tepi layar */
+  padding-inline: 0 !important;
+}
+@media (min-width: 600px) {
+  .dashboard-outer {
+    padding-inline: var(--margin-mobile) !important;
+  }
+}
+@media (min-width: 900px) {
+  .dashboard-outer {
+    padding-inline: var(--margin-desktop) !important;
+  }
+}
+@media (min-width: 600px) { .dashboard-section { padding: 0 var(--margin-mobile) 80px; } }
 @media (min-width: 900px) { .dashboard-section { padding: 0 var(--margin-desktop) 80px; } }
 
 .dashboard-card {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: 0;
   background: rgba(15,23,42,0.7);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 24px;
+  border: none;
+  border-radius: 0;
+  padding: 0;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 0 30px -10px rgba(0,240,255,0.08);
 }
+@media (min-width: 600px) {
+  .dashboard-card {
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 20px;
+    gap: 20px;
+  }
+}
 @media (min-width: 900px) {
   .dashboard-card {
     grid-template-columns: minmax(0,7fr) minmax(0,5fr);
+    padding: 24px;
+    gap: 24px;
   }
 }
 
 /* ============ Video Panel ============ */
-.video-pane { display: flex; flex-direction: column; gap: 16px; }
+.video-pane { display: flex; flex-direction: column; gap: 0; }
+@media (min-width: 600px) { .video-pane { gap: 14px; } }
 
 .video-frame {
   position: relative; width: 100%;
-  aspect-ratio: 16/9; overflow: hidden;
-  border-radius: var(--r-sm);
+  /* Mobile: rasio lebih portrait, tinggi minimum besar */
+  aspect-ratio: 4/3;
+  min-height: 280px;
+  overflow: hidden;
+  border-radius: 0;
   background: var(--obsidian);
-  border: 1px solid var(--border);
+  border: none;
+  border-bottom: 1px solid var(--border);
   box-shadow: 0 0 20px -5px rgba(0,240,255,0.15);
+}
+@media (min-width: 480px) {
+  .video-frame {
+    aspect-ratio: 4/3;
+    min-height: 320px;
+    border-radius: 0;
+  }
+}
+@media (min-width: 600px) {
+  .video-frame {
+    aspect-ratio: 16/9;
+    min-height: auto;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
+  }
 }
 
 /* Camera Placeholder */
@@ -448,7 +496,16 @@ code { font-family: var(--font-mono); }
 .bb-br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
 
 /* Video controls */
-.video-controls {}
+.video-controls {
+  padding: 12px var(--margin-mobile);
+  border-bottom: 1px solid var(--border);
+}
+@media (min-width: 600px) {
+  .video-controls {
+    padding: 0;
+    border-bottom: none;
+  }
+}
 .btn-primary.is-live {
   background: rgba(16,185,129,0.15);
   color: var(--mint); border: 1px solid rgba(16,185,129,0.45);
@@ -457,7 +514,14 @@ code { font-family: var(--font-mono); }
 
 /* ============ Telemetry Panel ============ */
 .telemetry-pane {
-  display: flex; flex-direction: column; gap: 18px;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 16px var(--margin-mobile);
+}
+@media (min-width: 600px) {
+  .telemetry-pane {
+    padding: 0;
+    gap: 18px;
+  }
 }
 
 .tele-row {
@@ -687,8 +751,68 @@ code { font-family: var(--font-mono); }
   50% { box-shadow: 0 0 25px rgba(0,240,255,0.35), inset 0 0 12px rgba(0,240,255,0.08); }
 }
 
+/* ============ Mobile Extra Tweaks ============ */
+
+/* Pastikan video frame terlihat jelas di HP kecil (<480px) */
+@media (max-width: 479px) {
+  .video-frame {
+    aspect-ratio: 1/1;
+    min-height: 300px;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .hero-actions .btn {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .badge { font-size: 10px; padding: 4px 12px; }
+
+  /* Sembunyikan emotion card di layar sangat kecil jika perlu,
+     tapi tetap tampilkan — hanya kurangi padding */
+  .emotion-card { padding: 14px; }
+  .emotion-card-value { font-size: 22px; }
+
+  /* Bars lebih compact */
+  .bar-row { margin-bottom: 8px; }
+}
+
+/* Tablet portrait 480-599 */
+@media (min-width: 480px) and (max-width: 599px) {
+  .video-frame {
+    aspect-ratio: 4/3;
+    min-height: 340px;
+  }
+}
+
+/* Pastikan tombol Start/Stop tidak terlalu kecil di mobile */
+@media (max-width: 599px) {
+  #initialize-demo, #initialize-demo-2 {
+    font-size: 12px;
+    padding: 12px 16px;
+  }
+
+  /* Dashboard full-bleed di mobile */
+  .dashboard-section {
+    margin-left: calc(-1 * var(--margin-mobile));
+    margin-right: calc(-1 * var(--margin-mobile));
+    width: calc(100% + 2 * var(--margin-mobile));
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* Perbaiki scrollbar horizontal pada code block di mobile */
+.code-body { -webkit-overflow-scrolling: touch; }
+
 /* ============ Reduced Motion ============ */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.001s !important; transition-duration: 0.001s !important; }
 }
+
+
+

@@ -2,7 +2,7 @@
 <html class="dark" lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover"/>
 <title>CUPLIS.AI // EMOTION LAB</title>
 <meta name="description" content="Real-time facial emotion detection powered by Hugging Face Transformers.js and Vision Transformer architecture."/>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%23090D16'/><rect x='5' y='5' width='22' height='22' rx='4' fill='none' stroke='%2300F0FF' stroke-width='2'/><rect x='11' y='11' width='10' height='10' rx='2' fill='%2300F0FF' opacity='0.8'/></svg>"/>
@@ -77,8 +77,8 @@
 
 <!-- ==================== 3. Dashboard / Demo ==================== -->
 <section class="dashboard-section" id="try-demo">
-  <div class="container">
-    <div class="dashboard-card">
+  <div class="dashboard-outer container">
+  <div class="dashboard-card">
 
       <!-- === Video Panel === -->
       <div class="video-pane" id="video-pane">
@@ -200,7 +200,7 @@
         </div>
       </aside>
     </div><!-- /dashboard-card -->
-  </div>
+  </div><!-- /dashboard-outer -->
 </section>
 
 <!-- ==================== 4. Architecture & Integration ==================== -->
@@ -289,3 +289,4 @@ results = classifier(<span class="tok-str">"live_frame_01.jpg"</span>)
 <script src="js/main.js"></script>
 </body>
 </html>
+
